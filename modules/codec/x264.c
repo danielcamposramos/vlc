@@ -163,6 +163,7 @@ static void x264_log( void *, int i_level, const char *psz, va_list );
 
 #define FRAMEPACKING_TEXT N_("Frame packing")
 #define FRAMEPACKING_LONGTEXT N_( "For stereoscopic videos define frame arrangement:\n" \
+    "-2: same as input - signal the layout of a stereoscopic input\n" \
     " 0: checkerboard - pixels are alternatively from L and R\n" \
     " 1: column alternation - L and R are interlaced by column\n" \
     " 2: row alternation - L and R are interlaced by row\n" \
@@ -429,9 +430,9 @@ static const char *const direct_pred_list_text[] =
   { N_("None"), N_("Spatial"), N_("Temporal"), N_("Auto") };
 
 static const int framepacking_list[] =
-  { -1, 0, 1, 2, 3, 4, 5, 6 };
+  { -2, -1, 0, 1, 2, 3, 4, 5, 6 };
 static const char *const framepacking_list_text[] =
-  { N_("Unset"), N_("Checkerboard"), N_("Column alternation"), N_("Row alternation"), N_("Side by side"), N_("Top bottom"), N_("Frame alternation"), N_("2D") };
+  { N_("Same as input"), N_("Unset"), N_("Checkerboard"), N_("Column alternation"), N_("Row alternation"), N_("Side by side"), N_("Top bottom"), N_("Frame alternation"), N_("2D") };
 
 vlc_module_begin ()
 #ifdef PLUGIN_X264_10B
@@ -515,7 +516,7 @@ vlc_module_begin ()
 
     add_integer( SOUT_CFG_PREFIX "frame-packing", -1, FRAMEPACKING_TEXT, FRAMEPACKING_LONGTEXT )
         change_integer_list( framepacking_list, framepacking_list_text )
-        change_integer_range( -1, 6)
+        change_integer_range( -2, 6)
 
     add_integer( SOUT_CFG_PREFIX "slices", 0, SLICE_COUNT, SLICE_COUNT_LONGTEXT )
     add_integer( SOUT_CFG_PREFIX "slice-max-size", 0, SLICE_MAX_SIZE, SLICE_MAX_SIZE_LONGTEXT )
@@ -751,6 +752,28 @@ typedef struct
     uint32_t         i_colorspace;
     uint8_t         *p_sei;
 } encoder_sys_t;
+
+/*****************************************************************************
+ * FramePackingFromMultiview: map the decoded stereoscopic layout to the
+ * frame_packing_arrangement_type of ITU-T H.264 Annex D (payload type 45),
+ * so that a stereoscopic input keeps its signalling through a re-encode
+ * without the user having to set --sout-x264-frame-packing by hand.
+ *****************************************************************************/
+static int FramePackingFromMultiview( video_multiview_mode_t mode )
+{
+    switch( mode )
+    {
+        case MULTIVIEW_STEREO_CHECKERBOARD: return 0;
+        case MULTIVIEW_STEREO_COL:          return 1;
+        case MULTIVIEW_STEREO_ROW:          return 2;
+        case MULTIVIEW_STEREO_SBS:          return 3;
+        case MULTIVIEW_STEREO_TB:           return 4;
+        /* Not MULTIVIEW_STEREO_FRAME: x264 derives the view of each frame
+         * from its parity, so a dropped or duplicated frame would swap the
+         * eyes from then on. Frame alternation stays an explicit choice. */
+        default:                            return -1;
+    }
+}
 
 /*****************************************************************************
  * Open: probe the encoder
@@ -1051,6 +1074,8 @@ static int  Open ( vlc_object_t *p_this )
         p_sys->param.rc.f_aq_strength = f_val;
 
     i_val = var_GetInteger( p_enc, SOUT_CFG_PREFIX "frame-packing" );
+    if( i_val == -2 )
+        i_val = FramePackingFromMultiview( p_enc->fmt_in.video.multiview_mode );
     if( i_val > -1 )
         p_sys->param.i_frame_packing = i_val;
 
