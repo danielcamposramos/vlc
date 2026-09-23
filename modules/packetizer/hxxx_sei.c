@@ -165,7 +165,7 @@ void HxxxParseSEI(const uint8_t *p_buf, size_t i_buf,
                     sei_data.frame_packing.b_frame0 = bs_read1( &s );
                 }
                 else sei_data.frame_packing.type = FRAME_PACKING_CANCEL;
-
+                b_continue = pf_callback( &sei_data, cbdata );
             } break;
 
             /* Look for SEI recovery point */
