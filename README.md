@@ -1,3 +1,11 @@
+This repository exists because a technically based fix was tagged as slop by the VLC maintainers. As our master Linus Torvalds says, "Linux is not one of those anti-AI projects, and if somebody has issues with that, they can do the open-source thing and fork it" ([LKML, 14 July 2026](https://lore.kernel.org/linux-media/CAHk-=wi4zC+Ze8e+p3tMv8TtG_80KzsZ1syL9anBtmEh5Z40vg@mail.gmail.com/)). We did the FOSS thing and forked it, to make it right.
+
+**FIXES A BUG PRESENT SINCE COMMIT 89347c3e2d (JULY 2017, IN EVERY VLC SINCE 3.0.0): VLC NOW READS THE STEREOSCOPIC 3D SIGNAL OF H.264 VIDEO (THE FRAME PACKING SEI OF ITU-T H.264 ANNEX D) AND KEEPS IT THROUGH TRANSCODING, SO 3D TELEVISIONS SWITCH TO 3D BY THEMSELVES.**
+
+This fork carries three small changes on top of VLC: the SEI parser now hands the frame packing message to the H.264 packetizer (the missing call that left the layout undetected), the transcoder passes the layout to the video encoder, and the x264 encoder signals it. Upstream merge request: [videolan/vlc!10366](https://code.videolan.org/videolan/vlc/-/merge_requests/10366). Measurements and background: [sony-bravia-linux](https://github.com/danielcamposramos/sony-bravia-linux).
+
+---
+
 # VLC media player
 
 **VLC** is a libre and open source **media player** and **multimedia engine**,
