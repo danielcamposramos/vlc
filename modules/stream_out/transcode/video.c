@@ -609,6 +609,8 @@ static void transcode_video_encoder_init( sout_stream_t *p_stream,
         id->p_encoder->fmt_out.video.orientation =
         id->p_decoder->fmt_in.video.orientation;
 
+    id->p_encoder->fmt_in.video.multiview_mode = p_vid_out->multiview_mode;
+
     transcode_video_framerate_init( p_stream, id, p_vid_out );
 
     transcode_video_size_init( p_stream, id, p_vid_out );
