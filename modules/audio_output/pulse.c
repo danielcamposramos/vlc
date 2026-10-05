@@ -757,7 +757,10 @@ static unsigned sink_rate(audio_output_t *aout)
 {
     aout_sys_t *sys = aout->sys;
     const char *name = (sys->sink_force != NULL) ? sys->sink_force
-                                                 : "@DEFAULT_SINK@";
+                                                 : getenv("PULSE_SINK");
+
+    if (name == NULL || name[0] == '\0')
+        name = "@DEFAULT_SINK@";
 
     pa_threaded_mainloop_lock(sys->mainloop);
     sys->sink_rate = 0;
