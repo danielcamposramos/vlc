@@ -1268,9 +1268,13 @@ static bool ParseSeiCallback( const hxxx_sei_data_t *p_sei_data, void *cbdata )
                     case FRAME_PACKING_INTERLEAVED_ROW:
                         mode = MULTIVIEW_STEREO_ROW; break;
                     case FRAME_PACKING_SIDE_BY_SIDE:
-                        mode = MULTIVIEW_STEREO_SBS; break;
+                        mode = p_sei_data->frame_packing.b_left_first ?
+                               MULTIVIEW_STEREO_SBS :
+                               MULTIVIEW_STEREO_SBS_RIGHT_FIRST; break;
                     case FRAME_PACKING_TOP_BOTTOM:
-                        mode = MULTIVIEW_STEREO_TB; break;
+                        mode = p_sei_data->frame_packing.b_left_first ?
+                               MULTIVIEW_STEREO_TB :
+                               MULTIVIEW_STEREO_TB_RIGHT_FIRST; break;
                     case FRAME_PACKING_TEMPORAL:
                         mode = MULTIVIEW_STEREO_FRAME; break;
                     case FRAME_PACKING_TILED:
