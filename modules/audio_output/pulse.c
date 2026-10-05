@@ -38,12 +38,31 @@
 static int  Open        ( vlc_object_t * );
 static void Close       ( vlc_object_t * );
 
+#define FORMAT_TEXT N_("Output sample format")
+#define FORMAT_LONGTEXT N_("Automatic sends floating point samples, which " \
+    "the sound server mixes at the rate and depth of its own output. " \
+    "\"Stream\" sends the format of the stream.")
+static const char *const formats[] = { "auto", "stream", };
+static const char *const formats_text[] = {
+    N_("Automatic (floating point)"), N_("Format of the stream"),
+};
+
+#define BUFFER_TEXT N_("Buffer length multiplier")
+#define BUFFER_LONGTEXT N_("Multiplies the length of the audio buffer. The " \
+    "default 1 keeps the shortest delay, larger values give more headroom " \
+    "against scheduling and network jitter.")
+
 vlc_module_begin ()
     set_shortname( "PulseAudio" )
     set_description( N_("Pulseaudio audio output") )
     set_capability( "audio output", 160 )
     set_category( CAT_AUDIO )
     set_subcategory( SUBCAT_AUDIO_AOUT )
+    add_string( "pulse-audio-format", "auto", FORMAT_TEXT, FORMAT_LONGTEXT,
+                false )
+        change_string_list( formats, formats_text )
+    add_integer_with_range( "pulse-buffer-multiplier", 1, 1, 8, BUFFER_TEXT,
+                            BUFFER_LONGTEXT, true )
     add_shortcut( "pulseaudio", "pa" )
     set_callbacks( Open, Close )
 vlc_module_end ()
@@ -718,6 +737,13 @@ static int Start(audio_output_t *aout, audio_sample_format_t *restrict fmt)
     /* Sample format specification */
     struct pa_sample_spec ss = { .format = PA_SAMPLE_INVALID };
     pa_encoding_t encoding = PA_ENCODING_PCM;
+
+    char *format_mode = var_InheritString(aout, "pulse-audio-format");
+    if (HAVE_FPU && (format_mode == NULL || strcmp(format_mode, "stream"))
+     && (fmt->i_format == VLC_CODEC_S32N || fmt->i_format == VLC_CODEC_S16N
+      || fmt->i_format == VLC_CODEC_U8))
+        fmt->i_format = VLC_CODEC_FL32;
+    free(format_mode);
 
     switch (fmt->i_format)
     {
