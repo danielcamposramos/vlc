@@ -75,7 +75,7 @@ vlc_module_begin ()
     set_callbacks( OpenConverter, Close )
 
     add_submodule()
-    set_capability( "audio resampler", 0 )
+    set_capability( "audio resampler", 60 )
     set_callbacks( OpenResampler, Close )
     add_shortcut( "soxr" )
 vlc_module_end ()
