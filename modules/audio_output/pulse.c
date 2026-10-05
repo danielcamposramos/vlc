@@ -830,9 +830,12 @@ static int Start(audio_output_t *aout, audio_sample_format_t *restrict fmt)
     /* PulseAudio goes berserk if the target length (tlength) is not
      * significantly longer than 2 periods (minreq), or when the period length
      * is unspecified and the target length is short. */
-    attr.tlength = pa_usec_to_bytes(3 * AOUT_MIN_PREPARE_TIME, &ss);
+    const unsigned multiplier = var_InheritInteger(aout,
+                                                   "pulse-buffer-multiplier");
+    attr.tlength = pa_usec_to_bytes(3 * AOUT_MIN_PREPARE_TIME * multiplier,
+                                    &ss);
     attr.prebuf = 0; /* trigger manually */
-    attr.minreq = pa_usec_to_bytes(AOUT_MIN_PREPARE_TIME, &ss);
+    attr.minreq = pa_usec_to_bytes(AOUT_MIN_PREPARE_TIME * multiplier, &ss);
     attr.fragsize = 0; /* not used for output */
 
     pa_cvolume *cvolume = NULL, cvolumebuf;
