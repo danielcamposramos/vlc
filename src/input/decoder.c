@@ -413,6 +413,37 @@ static int aout_update_format( decoder_t *p_dec )
     return 0;
 }
 
+/**
+ * The stream's signalling says side by side or top and bottom, not whether
+ * each view is squeezed into half the frame or has the frame's full size.
+ * The frame's shape tells: a side by side frame whose display aspect ratio is
+ * at least 2.5, or a top and bottom frame whose is at most 1.2, holds full
+ * views (a normal view is between 1.25 and 2.39), so each view keeps the
+ * frame's size. Halve the display aspect ratio of such a frame in the
+ * direction of the packing, so that the display shows one view's shape.
+ */
+static void StereoFullViewAspect( video_format_t *fmt )
+{
+    const int64_t w = (int64_t)fmt->i_visible_width  * fmt->i_sar_num;
+    const int64_t h = (int64_t)fmt->i_visible_height * fmt->i_sar_den;
+
+    switch( fmt->multiview_mode )
+    {
+        case MULTIVIEW_STEREO_SBS:
+        case MULTIVIEW_STEREO_SBS_RIGHT_FIRST:
+            if( 2 * w >= 5 * h )
+                fmt->i_sar_den *= 2;
+            break;
+        case MULTIVIEW_STEREO_TB:
+        case MULTIVIEW_STEREO_TB_RIGHT_FIRST:
+            if( 5 * w <= 6 * h )
+                fmt->i_sar_num *= 2;
+            break;
+        default:
+            break;
+    }
+}
+
 static int vout_update_format( decoder_t *p_dec )
 {
     decoder_owner_sys_t *p_owner = p_dec->p_owner;
@@ -495,6 +526,8 @@ static int vout_update_format( decoder_t *p_dec )
 
         vlc_ureduce( &fmt.i_sar_num, &fmt.i_sar_den,
                      fmt.i_sar_num, fmt.i_sar_den, 50000 );
+
+        StereoFullViewAspect( &fmt );
 
         video_format_AdjustColorSpace( &fmt );
 
