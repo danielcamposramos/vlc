@@ -618,9 +618,27 @@ void matroska_segment_c::ParseTrackEntry( const KaxTrackEntry *m )
             ONLY_FMT(VIDEO);
             debug( vars, "Track Video Interlaced=%u", static_cast<uint8>( fint ) ) ;
         }
-        E_CASE( KaxVideoStereoMode, stereo ) // UNUSED
+        E_CASE( KaxVideoStereoMode, stereo )
         {
+            ONLY_FMT(VIDEO);
             debug( vars, "Track Video Stereo Mode=%u", static_cast<uint8>( stereo ) ) ;
+            switch( static_cast<uint8>( stereo ) )
+            {
+                case 1:
+                    vars.tk->fmt.video.multiview_mode = MULTIVIEW_STEREO_SBS;
+                    break;
+                case 2:
+                    vars.tk->fmt.video.multiview_mode = MULTIVIEW_STEREO_TB_RIGHT_FIRST;
+                    break;
+                case 3:
+                    vars.tk->fmt.video.multiview_mode = MULTIVIEW_STEREO_TB;
+                    break;
+                case 11:
+                    vars.tk->fmt.video.multiview_mode = MULTIVIEW_STEREO_SBS_RIGHT_FIRST;
+                    break;
+                default:
+                    break;
+            }
         }
         E_CASE( KaxVideoPixelWidth, vwidth )
         {
