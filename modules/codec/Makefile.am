@@ -379,6 +379,8 @@ libavcodec_plugin_la_SOURCES = \
 	codec/avcodec/audio.c \
 	codec/avcodec/va.c codec/avcodec/va.h \
 	codec/avcodec/avcodec.c codec/avcodec/avcodec.h \
+	packetizer/hxxx_nal.c packetizer/hxxx_nal.h \
+	packetizer/hxxx_sei.c packetizer/hxxx_sei.h \
 	packetizer/av1_obu.c packetizer/av1_obu.h packetizer/av1.h
 if ENABLE_SOUT
 libavcodec_plugin_la_SOURCES += codec/avcodec/encoder.c
