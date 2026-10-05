@@ -92,6 +92,11 @@ static const char *const formats_text[] = {
     N_("Automatic (best the device offers)"), N_("Format of the stream"),
 };
 
+#define AUDIO_BUFFER_TEXT N_("Buffer period multiplier")
+#define AUDIO_BUFFER_LONGTEXT N_("Multiplies the length of the periods of the " \
+    "audio buffer. The default 1 keeps the shortest delay, larger values give " \
+    "more headroom against scheduling and network jitter.")
+
 vlc_module_begin ()
     set_shortname( "ALSA" )
     set_description( N_("ALSA audio output") )
@@ -108,6 +113,8 @@ vlc_module_begin ()
     add_string ("alsa-audio-format", "auto",
                 AUDIO_FORMAT_TEXT, AUDIO_FORMAT_LONGTEXT, false)
         change_string_list (formats, formats_text)
+    add_integer_with_range ("alsa-buffer-multiplier", 1, 1, 8,
+                            AUDIO_BUFFER_TEXT, AUDIO_BUFFER_LONGTEXT, true)
     add_sw_gain ()
     set_capability( "audio output", 150 )
     set_callbacks( Open, Close )
@@ -529,7 +536,8 @@ static int Start (audio_output_t *aout, audio_sample_format_t *restrict fmt)
     sys->rate = fmt->i_rate;
 
 #if 1 /* work-around for period-long latency outputs (e.g. PulseAudio): */
-    param = AOUT_MIN_PREPARE_TIME;
+    param = AOUT_MIN_PREPARE_TIME
+            * var_InheritInteger (aout, "alsa-buffer-multiplier");
     val = snd_pcm_hw_params_set_period_time_near (pcm, hw, &param, NULL);
     if (val)
     {
