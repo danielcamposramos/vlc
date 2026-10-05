@@ -47,6 +47,12 @@ static const char *const formats_text[] = {
     N_("Automatic (floating point)"), N_("Format of the stream"),
 };
 
+#define RATE_TEXT N_("Output sample rate")
+#define RATE_LONGTEXT N_("Sample rate, in hertz, that the stream is created " \
+    "with, and that the audio is resampled to by the player. 0 keeps the " \
+    "rate of the stream. This parameter is ignored when digital " \
+    "pass-through is active.")
+
 #define BUFFER_TEXT N_("Buffer length multiplier")
 #define BUFFER_LONGTEXT N_("Multiplies the length of the audio buffer. The " \
     "default 1 keeps the shortest delay, larger values give more headroom " \
@@ -61,6 +67,8 @@ vlc_module_begin ()
     add_string( "pulse-audio-format", "auto", FORMAT_TEXT, FORMAT_LONGTEXT,
                 false )
         change_string_list( formats, formats_text )
+    add_integer_with_range( "pulse-audio-rate", 48000, 0, 384000, RATE_TEXT,
+                            RATE_LONGTEXT, false )
     add_integer_with_range( "pulse-buffer-multiplier", 1, 1, 8, BUFFER_TEXT,
                             BUFFER_LONGTEXT, true )
     add_shortcut( "pulseaudio", "pa" )
@@ -811,6 +819,12 @@ static int Start(audio_output_t *aout, audio_sample_format_t *restrict fmt)
     }
 
     ss.rate = fmt->i_rate;
+    if (encoding == PA_ENCODING_PCM)
+    {
+        unsigned rate = var_InheritInteger(aout, "pulse-audio-rate");
+        if (rate != 0)
+            ss.rate = rate;
+    }
     ss.channels = fmt->i_channels;
     if (!pa_sample_spec_valid(&ss)) {
         msg_Err(aout, "unsupported sample specification");
