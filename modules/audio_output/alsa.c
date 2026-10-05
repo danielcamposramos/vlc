@@ -77,6 +77,21 @@ static const char *const channels_text[] = {
     N_("Surround 5.0"), N_("Surround 5.1"), N_("Surround 7.1"),
 };
 
+#define AUDIO_RATE_TEXT N_("Output sample rate")
+#define AUDIO_RATE_LONGTEXT N_("Sample rate, in hertz, that the audio device " \
+    "is asked for. The device uses the nearest rate it offers, and the " \
+    "audio is resampled to it. 0 keeps the rate of the stream. " \
+    "This parameter is ignored when digital pass-through is active.")
+
+#define AUDIO_FORMAT_TEXT N_("Output sample format")
+#define AUDIO_FORMAT_LONGTEXT N_("Automatic uses the best format that the " \
+    "audio device offers: floating point, then 32-bit (24 significant bits), " \
+    "then 16-bit. \"Stream\" asks for the format of the stream first.")
+static const char *const formats[] = { "auto", "stream", };
+static const char *const formats_text[] = {
+    N_("Automatic (best the device offers)"), N_("Format of the stream"),
+};
+
 vlc_module_begin ()
     set_shortname( "ALSA" )
     set_description( N_("ALSA audio output") )
@@ -88,6 +103,11 @@ vlc_module_begin ()
     add_integer ("alsa-audio-channels", AOUT_CHANS_FRONT,
                  AUDIO_CHAN_TEXT, AUDIO_CHAN_LONGTEXT, false)
         change_integer_list (channels, channels_text)
+    add_integer_with_range ("alsa-audio-rate", 48000, 0, 384000,
+                            AUDIO_RATE_TEXT, AUDIO_RATE_LONGTEXT, false)
+    add_string ("alsa-audio-format", "auto",
+                AUDIO_FORMAT_TEXT, AUDIO_FORMAT_LONGTEXT, false)
+        change_string_list (formats, formats_text)
     add_sw_gain ()
     set_capability( "audio output", 150 )
     set_callbacks( Open, Close )
@@ -427,7 +447,13 @@ static int Start (audio_output_t *aout, audio_sample_format_t *restrict fmt)
     }
 
     /* Set sample format */
-    if (snd_pcm_hw_params_test_format (pcm, hw, pcm_format) == 0)
+    char *format_mode = var_InheritString (aout, "alsa-audio-format");
+    const bool stream_format = format_mode != NULL
+                               && !strcmp (format_mode, "stream");
+    free (format_mode);
+
+    if ((stream_format || spdif)
+     && snd_pcm_hw_params_test_format (pcm, hw, pcm_format) == 0)
         ;
     else
     if (snd_pcm_hw_params_test_format (pcm, hw, SND_PCM_FORMAT_FLOAT) == 0)
@@ -490,12 +516,16 @@ static int Start (audio_output_t *aout, audio_sample_format_t *restrict fmt)
     }
 
     /* Set sample rate */
-    val = snd_pcm_hw_params_set_rate_near (pcm, hw, &fmt->i_rate, NULL);
+    unsigned rate = spdif ? 0 : var_InheritInteger (aout, "alsa-audio-rate");
+    if (rate == 0)
+        rate = fmt->i_rate;
+    val = snd_pcm_hw_params_set_rate_near (pcm, hw, &rate, NULL);
     if (val)
     {
         msg_Err (aout, "cannot set sample rate: %s", snd_strerror (val));
         goto error;
     }
+    fmt->i_rate = rate;
     sys->rate = fmt->i_rate;
 
 #if 1 /* work-around for period-long latency outputs (e.g. PulseAudio): */
