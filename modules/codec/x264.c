@@ -789,8 +789,12 @@ static int FramePackingFromMultiview( video_multiview_mode_t mode )
         case MULTIVIEW_STEREO_CHECKERBOARD: return 0;
         case MULTIVIEW_STEREO_COL:          return 1;
         case MULTIVIEW_STEREO_ROW:          return 2;
-        case MULTIVIEW_STEREO_SBS:          return 3;
-        case MULTIVIEW_STEREO_TB:           return 4;
+        /* x264 signals the left view first whatever the input says, the
+         * layout is kept */
+        case MULTIVIEW_STEREO_SBS:
+        case MULTIVIEW_STEREO_SBS_RIGHT_FIRST: return 3;
+        case MULTIVIEW_STEREO_TB:
+        case MULTIVIEW_STEREO_TB_RIGHT_FIRST:  return 4;
         /* Not MULTIVIEW_STEREO_FRAME: x264 derives the view of each frame
          * from its parity, so a dropped or duplicated frame would swap the
          * eyes from then on. Frame alternation stays an explicit choice. */
