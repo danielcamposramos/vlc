@@ -31,6 +31,10 @@
 #include <vlc_plugin.h>
 #include <vlc_vout_display.h>
 #include <vlc_opengl.h>
+#ifdef HAVE_STEREO_DECLARE
+# include <vlc_xlib.h>
+# include <stereo-declare.h>
+#endif
 #include "vout_helper.h"
 
 /* Plugin callbacks */
@@ -76,7 +80,48 @@ struct vout_display_sys_t
     vout_display_opengl_t *vgl;
     vlc_gl_t *gl;
     picture_pool_t *pool;
+#ifdef HAVE_STEREO_DECLARE
+    Display *x11; /* connection the video window is declared with, if any */
+#endif
 };
+
+#ifdef HAVE_STEREO_DECLARE
+/**
+ * Declares the video window to the compositor as full side by side stereo
+ * content, left eye first, while a stereoscopic video plays. The compositor
+ * then holds both views in a window twice as wide as the one the video asked
+ * for, and the video output draws one view in each half.
+ */
+static void DeclareStereo (vout_display_t *vd, vout_window_t *surface)
+{
+    vout_display_sys_t *sys = vd->sys;
+
+    switch (vd->fmt.multiview_mode)
+    {
+        case MULTIVIEW_STEREO_SBS:
+        case MULTIVIEW_STEREO_SBS_RIGHT_FIRST:
+        case MULTIVIEW_STEREO_TB:
+        case MULTIVIEW_STEREO_TB_RIGHT_FIRST:
+            break;
+        default:
+            return;
+    }
+
+    if (surface->type != VOUT_WINDOW_TYPE_XID || !vlc_xlib_init (VLC_OBJECT(vd)))
+        return;
+
+    Display *x11 = XOpenDisplay (surface->display.x11);
+    if (x11 == NULL)
+        return;
+
+    if (stereo_supported_x11 (x11) >= 3
+     && stereo_declare_x11 (x11, surface->handle.xid, STEREO_SBS_FULL,
+                            STEREO_CLASS_VIDEO, STEREO_VIDEO_CURRENT) == 0)
+        sys->x11 = x11;
+    else
+        XCloseDisplay (x11);
+}
+#endif
 
 /* Display callbacks */
 static picture_pool_t *Pool (vout_display_t *, unsigned);
@@ -96,6 +141,9 @@ static int Open (vlc_object_t *obj)
 
     sys->gl = NULL;
     sys->pool = NULL;
+#ifdef HAVE_STEREO_DECLARE
+    sys->x11 = NULL;
+#endif
 
     vout_window_t *surface = vout_display_NewWindow (vd, VOUT_WINDOW_TYPE_INVALID);
     if (surface == NULL)
@@ -150,6 +198,9 @@ static int Open (vlc_object_t *obj)
         goto error;
 
     vd->sys = sys;
+#ifdef HAVE_STEREO_DECLARE
+    DeclareStereo (vd, surface);
+#endif
     vd->info.has_pictures_invalid = false;
     vd->info.subpicture_chromas = spu_chromas;
     vd->pool = Pool;
@@ -176,6 +227,14 @@ static void Close (vlc_object_t *obj)
     vout_display_sys_t *sys = vd->sys;
     vlc_gl_t *gl = sys->gl;
     vout_window_t *surface = gl->surface;
+
+#ifdef HAVE_STEREO_DECLARE
+    if (sys->x11 != NULL)
+    {
+        stereo_remove_x11 (sys->x11, surface->handle.xid);
+        XCloseDisplay (sys->x11);
+    }
+#endif
 
     vlc_gl_MakeCurrent (gl);
     vout_display_opengl_Delete (sys->vgl);
@@ -258,6 +317,11 @@ static int Control (vout_display_t *vd, int query, va_list ap)
             return VLC_EGENERIC;
         vout_display_opengl_SetWindowAspectRatio(sys->vgl, (float)place.width / place.height);
         vout_display_opengl_Viewport(sys->vgl, place.x, place.y, place.width, place.height);
+#ifdef HAVE_STEREO_DECLARE
+        /* The second view is in the second half of the declared window */
+        vout_display_opengl_SetViewStride(sys->vgl,
+                                          sys->x11 != NULL ? c.display.width : 0);
+#endif
         vlc_gl_ReleaseCurrent (sys->gl);
         return VLC_SUCCESS;
       }

@@ -3215,6 +3215,11 @@ AS_IF([test "${have_gl}" = "yes"], [
   AC_DEFINE([HAVE_GL], 1, [Defined if having OpenGL])
 ])
 
+dnl Declaration of the video window as stereo content to the compositor
+PKG_CHECK_MODULES([STEREO_DECLARE], [stereo-declare x11], [
+  AC_DEFINE([HAVE_STEREO_DECLARE], 1, [Defined if having libstereo-declare])
+], [:])
+
 dnl OpenGL ES 2: depends on EGL 1.1
 PKG_ENABLE_MODULES_VLC([GLES2], [], [glesv2], [OpenGL ES v2 support], [disabled])
 
