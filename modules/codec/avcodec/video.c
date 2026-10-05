@@ -42,6 +42,7 @@
 #include "avcommon_compat.h"
 #if LIBAVUTIL_VERSION_CHECK( 55, 16, 101 )
 #include <libavutil/mastering_display_metadata.h>
+#include <libavutil/stereo3d.h>
 #endif
 
 #include "avcodec.h"
@@ -336,11 +337,17 @@ static int lavc_UpdateVideoFormat(decoder_t *dec, AVCodecContext *ctx,
     fmt_out.p_palette = dec->fmt_out.video.p_palette;
     dec->fmt_out.video.p_palette = NULL;
 
+    /* what the frames said about it, see DecodeSidedata() */
+    const video_multiview_mode_t multiview_mode =
+        dec->fmt_out.video.multiview_mode;
+
     es_format_Change(&dec->fmt_out, VIDEO_ES, fmt_out.i_chroma);
     dec->fmt_out.video = fmt_out;
     dec->fmt_out.video.orientation = dec->fmt_in.video.orientation;
     dec->fmt_out.video.projection_mode = dec->fmt_in.video.projection_mode;
-    dec->fmt_out.video.multiview_mode = dec->fmt_in.video.multiview_mode;
+    dec->fmt_out.video.multiview_mode =
+        dec->fmt_in.video.multiview_mode != MULTIVIEW_2D ?
+        dec->fmt_in.video.multiview_mode : multiview_mode;
     dec->fmt_out.video.pose = dec->fmt_in.video.pose;
     if ( dec->fmt_in.video.mastering.max_luminance )
         dec->fmt_out.video.mastering = dec->fmt_in.video.mastering;
@@ -1067,6 +1074,42 @@ static int DecodeSidedata( decoder_t *p_dec, const AVFrame *frame, picture_t *p_
                      sizeof(p_pic->format.lighting) ) )
         {
             p_dec->fmt_out.video.lighting  = p_pic->format.lighting;
+            format_changed = true;
+        }
+    }
+#endif
+
+#if LIBAVUTIL_VERSION_CHECK( 55, 16, 101 )
+    /* A stream that carries its stereoscopic layout in the video itself (the
+     * frame packing SEI), inside a container that has no packetizer to read
+     * it, only tells it here. */
+    const AVFrameSideData *p_s3d =
+            av_frame_get_side_data( frame, AV_FRAME_DATA_STEREO3D );
+    if( p_s3d && p_dec->fmt_in.video.multiview_mode == MULTIVIEW_2D )
+    {
+        const AVStereo3D *s3d = (const AVStereo3D *) p_s3d->data;
+        const bool right_first = s3d->flags & AV_STEREO3D_FLAG_INVERT;
+        video_multiview_mode_t mode = p_dec->fmt_out.video.multiview_mode;
+
+        switch( s3d->type )
+        {
+            case AV_STEREO3D_SIDEBYSIDE:
+                mode = right_first ? MULTIVIEW_STEREO_SBS_RIGHT_FIRST
+                                   : MULTIVIEW_STEREO_SBS;
+                break;
+            case AV_STEREO3D_TOPBOTTOM:
+                mode = right_first ? MULTIVIEW_STEREO_TB_RIGHT_FIRST
+                                   : MULTIVIEW_STEREO_TB;
+                break;
+            case AV_STEREO3D_2D:
+                mode = MULTIVIEW_2D;
+                break;
+            default:
+                break;
+        }
+        if( mode != p_dec->fmt_out.video.multiview_mode )
+        {
+            p_dec->fmt_out.video.multiview_mode = mode;
             format_changed = true;
         }
     }
