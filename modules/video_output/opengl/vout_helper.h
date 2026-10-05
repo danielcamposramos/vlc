@@ -259,6 +259,9 @@ void vout_display_opengl_SetWindowAspectRatio(vout_display_opengl_t *vgl,
 
 void vout_display_opengl_Viewport(vout_display_opengl_t *vgl, int x, int y,
                                   unsigned width, unsigned height);
+/* Show both views of a stereoscopic video, the second one stride pixels to
+ * the right of the first; zero shows the left eye only */
+void vout_display_opengl_SetViewStride(vout_display_opengl_t *vgl, int stride);
 
 int vout_display_opengl_Prepare(vout_display_opengl_t *vgl,
                                 picture_t *picture, subpicture_t *subpicture);
