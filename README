@@ -1,3 +1,30 @@
+Sparky Stereo OS:
+=================
+
+This is the stereo version of VLC by Sparky Stereo OS, forked from
+videolan/vlc (https://github.com/videolan/vlc). It is called VLC Stereo. It
+shows both views of a stereoscopic video. It reads the packing from the
+H.264 and H.265 frame packing SEI and from Matroska StereoMode, and it
+signals the packing when it encodes with x264. Its audio defaults favour
+quality: 48 kHz, floating point samples and the SoX Resampler.
+
+Where it comes from:
+
+- VLC (https://www.videolan.org/vlc/) is made by VideoLAN and the VLC
+  authors; see AUTHORS and THANKS.
+- Debian (https://www.debian.org/) is the base of the system.
+- SparkyLinux (https://sparkylinux.org/), by Paweł "pavroo" Pijanowski,
+  builds on Debian.
+- Sparky Stereo OS (https://github.com/Sparky-OS/sparky-stereo-os) is the
+  stereo 3D edition of SparkyLinux: SparkyOS, powered by Debian.
+
+The 3.0.24-3d-stereo branch holds the version the distribution builds. The
+branch starts from VLC 3.0.24. The licences are unchanged; see COPYING and
+COPYING.LIB.
+
+Sparky Stereo OS, Daniel Ramos's edition of SparkyLinux (by Paweł "pavroo" Pijanowski).
+
+
 README for the VLC media player
 ===============================
 
